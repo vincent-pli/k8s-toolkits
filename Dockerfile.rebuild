@@ -3,7 +3,7 @@ FROM golang:1.12.5 as builder
 
 WORKDIR /workspace
 # Copy the go source
-COPY cmd/eventSender/sender.go main.go
+COPY sender.go main.go
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
