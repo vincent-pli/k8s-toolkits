@@ -1,0 +1,39 @@
+module github.com/vincent-pli/k8sclient
+
+go 1.12
+
+require (
+	github.com/cloudevents/sdk-go v0.8.0
+	github.com/davecgh/go-spew v1.1.1
+	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.2
+	github.com/google/gofuzz v1.0.0
+	github.com/google/uuid v1.1.1
+	github.com/googleapis/gnostic v0.3.0
+	github.com/hashicorp/golang-lru v0.5.1
+	github.com/imdario/mergo v0.3.7
+	github.com/json-iterator/go v1.1.7
+	github.com/knative/eventing-sources v0.7.1
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+	github.com/modern-go/reflect2 v1.0.1
+	github.com/spf13/pflag v1.0.3
+	go.opencensus.io v0.22.0
+	go.uber.org/atomic v1.4.0
+	go.uber.org/multierr v1.1.0
+	go.uber.org/zap v1.10.0
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7
+	golang.org/x/text v0.3.2
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	google.golang.org/appengine v1.6.1
+	gopkg.in/inf.v0 v0.9.1
+	gopkg.in/yaml.v2 v2.2.2
+	k8s.io/api v0.0.0-20190722141453-b90922c02518
+	k8s.io/apimachinery v0.0.0-20190719140911-bfcf53abc9f8
+	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
+	k8s.io/klog v0.3.3
+	k8s.io/utils v0.0.0-20190712204705-3dccf664f023
+	sigs.k8s.io/yaml v1.1.0
+)

@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: tutorial-pipeline-run-1
+  namespace: tekton
+spec:
+  pipelineRef:
+    name: tutorial-pipeline
+  serviceAccount: build-robot-git-ssh
+  trigger:
+    type: manual
+  resources:
+    - name: source-repo
+      resourceRef:
+        name: kubeflow-git
+    - name: docker-image
+      resourceRef:
+        name: kubeflow-image
