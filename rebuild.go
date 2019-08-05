@@ -27,7 +27,7 @@ type Details struct {
 
 func init() {
 	flag.StringVar(&eventType, "type", "dev.knative.source.gitlab.Push Hook", "Watches for this CloudEvent Type.")
-	gitResourcePath = "/gitResource.yaml"
+	gitResourcePath = "/gitresource.yaml"
 	pipelinePath = "/pipelinerun.yaml"
 }
 
