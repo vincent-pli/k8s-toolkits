@@ -7,6 +7,8 @@ COPY rebuild.go main.go
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
+COPY pipelinerun.yaml /
+COPY gitResource.yaml /
 
 
 # Build
@@ -15,7 +17,21 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:latest
+
+
+FROM ubuntu
 WORKDIR /
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get install -y curl wget
+RUN apt install -y libnss3-tools
+RUN update-ca-certificates
+
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /usr/local/bin/kubectl
+
 COPY --from=builder /workspace/manager .
-ENTRYPOINT ["/manager"]
+COPY --from=builder /pipelinerun.yaml /pipelinerun.yaml
+COPY --from=builder /gitResource.yaml /gitResource.yaml
+
+ENTRYPOINT [ "/manager" ]

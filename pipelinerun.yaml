@@ -10,7 +10,7 @@ spec:
   resources:
     - name: source-repo
       resourceRef:
-        name: kubeflow-git
+        name: ${RESOURCE_NAME}
   params:
     - name: files
-      value: 
+      value: ${FILES}

@@ -1,11 +1,11 @@
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
-  name: kubeflow-git
+  name: ${NAME}
 spec:
   type: git
   params:
     - name: url
-      value: https://github.com/kubeflow/examples.git
+      value: ${URL}
     - name: revision
       value: ${REVISION}

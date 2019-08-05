@@ -13,19 +13,22 @@ import (
 )
 
 var (
-	eventType string
+	eventType       string
+	gitResourcePath string
+	pipelinePath    string
 )
 
 type Details struct {
-	repoName     string
-	repoURL      string
-	revision     string
-	filesChanged []string
-	files        string
+	repoName string
+	repoURL  string
+	revision string
+	files    string
 }
 
 func init() {
 	flag.StringVar(&eventType, "type", "dev.knative.source.gitlab.Push Hook", "Watches for this CloudEvent Type.")
+	gitResourcePath = "/gitResource.yaml"
+	pipelinePath = "/pipelinerun.yaml"
 }
 
 func Run(cmd string, args ...string) (string, error) {
@@ -51,9 +54,14 @@ func parse(event cloudevents.Event) Details {
 	repoName := gjson.GetBytes(event.Data.([]byte), "repository.name").Raw
 	repoURL := gjson.GetBytes(event.Data.([]byte), "repository.url").Raw
 	revision := gjson.GetBytes(event.Data.([]byte), "after").Raw
-	files := gjson.GetBytes(event.Data.([]byte), "commits.0.modified").Raw
-	// revision := event.Data.after
-	// files := event.Data.commits[0].modified
+	files := ""
+	gjson.GetBytes(event.Data.([]byte), "commits.0.modified").ForEach(
+		func(key, value gjson.Result) bool {
+			files += value.String() + ","
+			return true // keep iterating
+		},
+	)
+	files = strings.TrimSuffix(files, ",")
 	details.repoName = repoName
 	details.repoURL = repoURL
 	details.revision = revision
@@ -63,7 +71,27 @@ func parse(event cloudevents.Event) Details {
 	return details
 }
 
+func replacePrefix(filePath string, sourcePlaceholder string, target string) error {
+	read, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	newContents := strings.Replace(string(read), sourcePlaceholder, target, -1)
+
+	err = ioutil.WriteFile(filePath, []byte(newContents), 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func replace(details Details) {
+	replacePrefix(gitResourcePath, "${NAME}", details.repoName)
+	replacePrefix(gitResourcePath, "${URL}", details.repoURL)
+	replacePrefix(gitResourcePath, "${REVISION}", details.revision)
+	replacePrefix(pipelinePath, "${RESOURCE_NAME}", details.repoName)
+	replacePrefix(pipelinePath, "${FILES}", details.files)
 
 }
 
