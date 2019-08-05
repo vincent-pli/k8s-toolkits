@@ -8,7 +8,7 @@ COPY rebuild.go main.go
 COPY go.mod go.mod
 COPY go.sum go.sum
 COPY pipelinerun.yaml /
-COPY gitResource.yaml /
+COPY gitresource.yaml /
 
 
 # Build
@@ -32,6 +32,6 @@ RUN mv ./kubectl /usr/local/bin/kubectl
 
 COPY --from=builder /workspace/manager .
 COPY --from=builder /pipelinerun.yaml /pipelinerun.yaml
-COPY --from=builder /gitResource.yaml /gitResource.yaml
+COPY --from=builder /gitresource.yaml /gitresource.yaml
 
 ENTRYPOINT [ "/manager" ]
