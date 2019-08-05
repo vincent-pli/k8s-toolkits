@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -16,8 +17,11 @@ var (
 )
 
 type Details struct {
-	gitSource    string
+	repoName     string
+	repoURL      string
+	revision     string
 	filesChanged []string
+	files        string
 }
 
 func init() {
@@ -44,6 +48,18 @@ func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
 
 func parse(event cloudevents.Event) Details {
 	details := Details{}
+	repoName := gjson.GetBytes(event.Data.([]byte), "repository.name").Raw
+	repoURL := gjson.GetBytes(event.Data.([]byte), "repository.url").Raw
+	revision := gjson.GetBytes(event.Data.([]byte), "after").Raw
+	files := gjson.GetBytes(event.Data.([]byte), "commits[0].modified").Raw
+	// revision := event.Data.after
+	// files := event.Data.commits[0].modified
+	details.repoName = repoName
+	details.repoURL = repoURL
+	details.revision = revision
+	details.files = files
+	log.Printf("Parsed CloudEvent,\n%s", details)
+
 	return details
 }
 
