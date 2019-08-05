@@ -7,12 +7,10 @@ spec:
   pipelineRef:
     name: tutorial-pipeline
   serviceAccount: build-robot-git-ssh
-  trigger:
-    type: manual
   resources:
     - name: source-repo
       resourceRef:
         name: kubeflow-git
-    - name: docker-image
-      resourceRef:
-        name: kubeflow-image
+  params:
+    - name: files
+      value: 

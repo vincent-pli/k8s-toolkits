@@ -1,147 +1,83 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
+	"flag"
 	"io/ioutil"
-	"net/http"
-	"os"
+	"log"
 	"os/exec"
-	"regexp"
 	"strings"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 )
 
-var echo = (os.Getenv("ECHO") != "")
+var (
+	eventType string
+)
 
-func Print(w http.ResponseWriter, format string, args ...interface{}) {
-	re := regexp.MustCompile(`token=[^ ]* `)
-	str := re.ReplaceAllString(fmt.Sprintf(format, args...), "token=TOKEN  ")
-
-	fmt.Printf(str)
-	if echo {
-		fmt.Fprintf(w, str)
-	}
+type Details struct {
+	gitSource    string
+	filesChanged []string
 }
 
-func Run(w http.ResponseWriter, cmd string, args ...string) (string, error) {
+func init() {
+	flag.StringVar(&eventType, "type", "dev.knative.source.gitlab.Push Hook", "Watches for this CloudEvent Type.")
+}
+
+func Run(cmd string, args ...string) (string, error) {
 	out, err := exec.Command(cmd, args...).CombinedOutput()
 	if err != nil {
-		Print(w, "Failed running: %s %s\n%s\n",
+		log.Print("Failed running: %s %s\n%s\n",
 			cmd, strings.Join(args, " "), err)
 	}
 	return string(out), err
 }
 
+func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
+	log.Printf("Received CloudEvent,\n%s", event)
+	if event.Type() == eventType {
+		details := parse(event)
+		replace(details)
+		triggerPipeline()
+	}
+}
+
+func parse(event cloudevents.Event) Details {
+	details := Details{}
+	return details
+}
+
+func replace(details Details) {
+
+}
+
+func triggerPipeline() {
+	token, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		log.Print("Can't load API token:%s\n", err)
+		return
+	}
+
+	args := []string{"kubectl", "--token=" + string(token),
+		"apply", "-f", "/gitresource.yaml"}
+	if out, err := Run(args[0], args[1:]...); err != nil {
+		log.Print("Error create git resource: %s\n%s\n", out, err)
+		return
+	}
+
+	args = []string{"kubectl", "--token=" + string(token),
+		"apply", "-f", "/pipelinerun.yaml"}
+	if out, err := Run(args[0], args[1:]...); err != nil {
+		log.Print("Error create pipelinerun: %s\n%s\n", out, err)
+		return
+	}
+}
+
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		var out string
-		msg := map[string]interface{}{}
+	ce, err := cloudevents.NewDefaultClient()
+	if err != nil {
+		log.Fatalf("failed to create CloudEvent client, %s", err)
+	}
 
-		body, _ := ioutil.ReadAll(r.Body)
-		if err = json.Unmarshal(body, &msg); err != nil {
-			Print(w, "Error parsing: %s\n\n%s\n", err, string(body))
-			return
-		}
-
-		body, _ = json.MarshalIndent(msg, "", "  ")
-		Print(w, "HEADERS:\n%v\nBODY:\n%s\n\n", r.Header, body)
-
-		Print(w, "Got push event\n")
-
-		token, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-		if err != nil {
-			Print(w, "Can't load API token:%s\n", err)
-			return
-		}
-
-		// Which Knative Service are we rebuilding?
-		ksvc := os.Getenv("KSVC")
-		if ksvc == "" {
-			ksvc = "gitlab-message-dumper"
-		}
-		Print(w, "ksvc: %s\n", ksvc)
-
-		// Get the YAML of the KnService so we can edit it
-		args := []string{"kubectl", "--token=" + string(token),
-			"apply", "-f", "/pipelinerun.yaml"}
-		if out, err = Run(w, args[0], args[1:]...); err != nil {
-			Print(w, "Error getting ksvc %q: %s\n%s\n", ksvc, out, err)
-			return
-		}
-
-		// if msg["action"] != nil {
-		// 	Print(w, "Got issue event\n")
-		// } else if msg["hook"] != nil {
-		// 	Print(w, "Got hook event\n")
-		// } else if msg["pusher"] != nil {
-		// 	Print(w, "Got push event\n")
-
-		// 	token, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-		// 	if err != nil {
-		// 		Print(w, "Can't load API token:%s\n", err)
-		// 		return
-		// 	}
-
-		// 	// Which Knative Service are we rebuilding?
-		// 	ksvc := os.Getenv("KSVC")
-		// 	if ksvc == "" {
-		// 		ksvc = "helloworld"
-		// 	}
-		// 	Print(w, "ksvc: %s\n", ksvc)
-
-		// 	// Get the YAML of the KnService so we can edit it
-		// 	args := []string{"kubectl", "--token=" + string(token),
-		// 		"get", "ksvc/" + ksvc, "-oyaml"}
-		// 	if out, err = Run(w, args[0], args[1:]...); err != nil {
-		// 		Print(w, "Error getting ksvc %q: %s\n%s\n", ksvc, out, err)
-		// 		return
-		// 	}
-
-		// 	// Modify the:  trigger: ...   line
-		// 	lines := strings.Split(out, "\n")
-		// 	foundIt := false
-		// 	for i, line := range lines {
-		// 		if strings.Contains(line, "   trigger:") {
-		// 			j := strings.Index(line, ":")
-		// 			lines[i] = line[:j+2] + `"` + time.Now().String() + `"`
-		// 			foundIt = true
-		// 			break
-		// 		}
-		// 	}
-
-		// 	if !foundIt {
-		// 		Print(w, "Can't find trigger:\n%s\n", string(out))
-		// 		return
-		// 	}
-
-		// 	// Save edited files to disk
-		// 	tmpFile, _ := ioutil.TempFile("", "")
-		// 	defer os.Remove(tmpFile.Name())
-		// 	buf := []byte(strings.Join(lines, "\n"))
-		// 	if err = ioutil.WriteFile(tmpFile.Name(), buf, 0700); err != nil {
-		// 		Print(w, "Error saving yaml: %s\n", err)
-		// 		return
-		// 	}
-
-		// 	// Apple the edits
-		// 	Print(w, "  Applying edits...\n")
-		// 	args = []string{"kubectl", "--token=" + string(token),
-		// 		"apply", "-f", tmpFile.Name()}
-		// 	if _, err = Run(w, args[0], args[1:]...); err != nil {
-		// 		Print(w, "%s\n%s\n%s\n", strings.Join(args, " "), out, err)
-		// 		return
-		// 	}
-
-		// 	Print(w, "  Done\n")
-		// } else {
-		// 	Print(w, "Unknown event: %s\n", string(body))
-		// 	if !echo {
-		// 		fmt.Fprintf(w, "Unknown event: %s\n", string(body))
-		// 	}
-		// }
-	})
-
-	fmt.Print("Listening on port 8080\n")
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(ce.StartReceiver(context.Background(), receive))
 }
