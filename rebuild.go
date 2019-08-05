@@ -51,7 +51,7 @@ func parse(event cloudevents.Event) Details {
 	repoName := gjson.GetBytes(event.Data.([]byte), "repository.name").Raw
 	repoURL := gjson.GetBytes(event.Data.([]byte), "repository.url").Raw
 	revision := gjson.GetBytes(event.Data.([]byte), "after").Raw
-	files := gjson.GetBytes(event.Data.([]byte), "commits[0].modified").Raw
+	files := gjson.GetBytes(event.Data.([]byte), "commits.0.modified").Raw
 	// revision := event.Data.after
 	// files := event.Data.commits[0].modified
 	details.repoName = repoName
