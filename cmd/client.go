@@ -1,15 +1,78 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/tektoncd/triggers/pkg/apis/triggers/v1alpha1"
+	triggersclient "github.com/tektoncd/triggers/pkg/client/injection/client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+func createEventListener() {
+	triggersclientset := triggersclient.Get(context.TODO())
+	// Create EventListener
+	namespace := "tekton-pipelines"
+	el, err := triggersclientset.TektonV1alpha1().EventListeners(namespace).Create(
+		&v1alpha1.EventListener{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-eventlistener",
+			},
+			Spec: v1alpha1.EventListenerSpec{
+				ServiceAccountName: "some-service-account",
+				Triggers: []v1alpha1.Trigger{
+					v1alpha1.Trigger{
+						TriggerBinding: v1alpha1.TriggerBindingRef{
+							Name: "some-trigger-binding",
+						},
+						TriggerTemplate: v1alpha1.TriggerTemplateRef{
+							Name: "some-trigger-template",
+						},
+					},
+				},
+			},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Failed to create EventListener: %s", err)
+	}
+	fmt.Printf("Created EventListener %s in namespace %s", el.Name, el.Namespace)
+
+	// Verify the EventListener's Deployment is created
+	// if err = WaitForDeploymentToExist(c, namespace, el.Name); err != nil {
+	// 	t.Fatalf("Failed to create EventListener Deployment: %s", err)
+	// }
+	// t.Log("Found EventListener's Deployment")
+
+	// // Verify the EventListener's Service is created
+	// if err = WaitForServiceToExist(c, namespace, el.Name); err != nil {
+	// 	t.Fatalf("Failed to create EventListener Service: %s", err)
+	// }
+	// t.Log("Found EventListener's Service")
+
+	// // Delete EventListener
+	// err = c.TriggersClient.TektonV1alpha1().EventListeners(namespace).Delete(el.Name, &metav1.DeleteOptions{})
+	// if err != nil {
+	// 	t.Fatalf("Failed to delete EventListener: %s", err)
+	// }
+	// t.Log("Deleted EventListener")
+
+	// // Verify the EventListener's Deployment is deleted
+	// if err = WaitForDeploymentToNotExist(c, namespace, el.Name); err != nil {
+	// 	t.Fatalf("Failed to delete EventListener Deployment: %s", err)
+	// }
+	// t.Log("EventListener's Deployment was deleted")
+
+	// // Verify the EventListener's Service is deleted
+	// if err = WaitForServiceToNotExist(c, namespace, el.Name); err != nil {
+	// 	t.Fatalf("Failed to delete EventListener Service: %s", err)
+	// }
+	// t.Log("EventListener's Service was deleted")
+}
 func main() {
 	clusterCfg, err := clientcmd.BuildConfigFromFlags("", "config")
 	if err != nil {
